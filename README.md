@@ -6,6 +6,19 @@ A modern, responsive, full-stack Hospital Management System built with **React**
 
 ---
 
+## 🔑 1-Click Demo Accounts
+
+For immediate exploration and portfolio evaluation, you can use the pre-configured credentials or the 1-click quick-fill buttons on the login portal:
+
+| Role | Username / Email | Password | Access & Capabilities |
+| :--- | :--- | :--- | :--- |
+| 👑 **Hospital Admin** | `Rishabh@123` | `Rishabh123` | Analytics, Doctor/Staff Management, Inventory Compliance & Reorder Approvals |
+| 🩺 **Doctor** | `mohan@gmail.com` | `mohan123` | Patient Queues, Medical History, E-Prescriptions, Inter-department Referrals |
+| 🧑 **Patient** | `Mohan@gmail.com` | `Mohan123` | Book Appointments, View Prescriptions, Referrals, Live Bill Payment |
+| 💊 **Pharmacist** | `Suresh Verma` | `Suresh123` | Medicine Dispense Queue, Real-time Stock Inventory, Reorder Requests |
+
+---
+
 ## 🌟 Key Features
 
 * **Multi-Role Portal Access:**
@@ -110,7 +123,7 @@ Hospital Management System/
    ```bash
    npm run dev
    ```
-   *The frontend will run on `http://localhost:5173` (or the port specified in terminal).*
+   *The frontend will run on `http://localhost:5173`.*
 
 ---
 

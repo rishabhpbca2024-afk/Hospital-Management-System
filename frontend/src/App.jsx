@@ -293,7 +293,7 @@ export default function App() {
     if (role === 'admin') setLoginForm({ usernameOrEmail: 'Rishabh@123', password: 'Rishabh123' });
     else if (role === 'doctor') setLoginForm({ usernameOrEmail: 'mohan@gmail.com', password: 'mohan123' });
     else if (role === 'patient') setLoginForm({ usernameOrEmail: 'Mohan@gmail.com', password: 'Mohan123' });
-    else if (role === 'pharmacist') setLoginForm({ usernameOrEmail: 'Mohan Meena', password: 'Mohan123' });
+    else if (role === 'pharmacist') setLoginForm({ usernameOrEmail: 'Suresh Verma', password: 'Suresh123' });
   };
 
   // Handle Login Submit
@@ -953,7 +953,7 @@ export default function App() {
                 type="button"
                 onClick={() => setQuickLogin('pharmacist')}
                 style={{ padding: '0.6rem 0.25rem', border: 'none', borderRadius: 8, fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', background: loginRole === 'pharmacist' ? 'white' : 'transparent', color: loginRole === 'pharmacist' ? 'var(--primary)' : 'var(--text-muted)', boxShadow: loginRole === 'pharmacist' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}>
-                💊 Chemist
+                💊 Pharmacist
               </button>
             </div>
 
@@ -1142,13 +1142,13 @@ export default function App() {
                   👑 Admin (Rishabh)
                 </button>
                 <button type="button" onClick={() => setQuickLogin('doctor')} className="btn btn-secondary btn-sm" style={{ justifyContent: 'flex-start' }}>
-                  🩺 Doctor (Mohan)
+                  🩺 Doctor (Dr. Mohan)
                 </button>
                 <button type="button" onClick={() => setQuickLogin('patient')} className="btn btn-secondary btn-sm" style={{ justifyContent: 'flex-start' }}>
                   🧑 Patient (Mohan)
                 </button>
                 <button type="button" onClick={() => setQuickLogin('pharmacist')} className="btn btn-secondary btn-sm" style={{ justifyContent: 'flex-start' }}>
-                  💊 Chemist (Meena)
+                  💊 Pharmacist (Suresh)
                 </button>
               </div>
             </div>
