@@ -530,7 +530,7 @@ export default function App() {
         payment_mode: payMethod,
         amount: currentBill.total_amount,
       });
-      flashSuccess(`Payment of $${currentBill.total_amount} successful via ${payMethod}!`);
+      flashSuccess(`Payment of ₹${currentBill.total_amount} successful via ${payMethod}!`);
       setPayModal({ open: false, bill: null });
       // Automatically open official hospital receipt so patient can view & print
       setReceiptModal({
@@ -858,9 +858,7 @@ export default function App() {
           </div>
           <div>
             <div style={{ fontSize: '1.15rem', fontWeight: 800 }}>Lifeline Hospital</div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Integrated Healthcare System
-            </div>
+            <div className="brand-subtext">Integrated Healthcare System</div>
           </div>
         </div>
 
@@ -871,7 +869,7 @@ export default function App() {
             className="btn btn-secondary btn-sm"
             title="Give Hospital Feedback">
             <MessageSquarePlus size={15} color="var(--primary)" />
-            <span>Feedback</span>
+            <span className="nav-btn-text">Feedback</span>
           </button>
 
           {user && (
@@ -886,7 +884,7 @@ export default function App() {
                 className="btn btn-secondary btn-sm"
                 title="Change Account Password">
                 <KeyRound size={15} />
-                <span>Password</span>
+                <span className="nav-btn-text">Password</span>
               </button>
 
               <div className="user-badge">
@@ -896,7 +894,7 @@ export default function App() {
               </div>
               <button onClick={handleLogout} className="btn btn-secondary btn-sm" title="Sign Out">
                 <LogOut size={15} />
-                <span>Logout</span>
+                <span className="nav-btn-text">Logout</span>
               </button>
             </div>
           )}
@@ -1164,11 +1162,11 @@ export default function App() {
           {/* ================================================================= */}
           {user.role === 'admin' && (
             <div>
-              <div style={{ marginBottom: '2rem' }}>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 800 }}>Executive Administration Suite</h1>
-                <p style={{ color: 'var(--text-muted)' }}>
-                  Hospital Oversight, Real-Time Financials, Staffing, and Compliance
-                </p>
+              <div className="page-header">
+                <div>
+                  <h1 className="page-title">Executive Administration Suite</h1>
+                  <p className="page-subtitle">Hospital Oversight, Real-Time Financials, Staffing, and Compliance</p>
+                </div>
               </div>
 
               {/* Confidential KPI Metrics */}
@@ -1202,7 +1200,7 @@ export default function App() {
                     <div className="stat-info">
                       <h4>Hospital Revenue (Paid)</h4>
                       <div className="stat-value" style={{ color: '#16a34a' }}>
-                        ${Number(stats.revenue?.total_revenue ?? stats.revenue?.total ?? 0).toLocaleString()}
+                        ₹{Number(stats.revenue?.total_revenue ?? stats.revenue?.total ?? 0).toLocaleString('en-IN')}
                       </div>
                     </div>
                     <div className="stat-icon green"><DollarSign size={24} /></div>
@@ -1234,7 +1232,7 @@ export default function App() {
 
               {/* Admin Tab 1: Overview */}
               {activeTab === 'overview' && stats && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem' }}>
+                <div className="grid-2-col">
                   <div className="card">
                     <div className="card-header">
                       <div className="card-title">Billing & Collections Summary</div>
@@ -1247,15 +1245,15 @@ export default function App() {
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.85rem 0', borderBottom: '1px solid var(--border)' }}>
                         <span style={{ color: 'var(--text-muted)' }}>Consultation Fees Earned</span>
-                        <strong>${Number(stats.revenue?.total_consultation_fees || 0).toLocaleString()}</strong>
+                        <strong>₹{Number(stats.revenue?.total_consultation_fees || 0).toLocaleString('en-IN')}</strong>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.85rem 0', borderBottom: '1px solid var(--border)' }}>
                         <span style={{ color: 'var(--text-muted)' }}>Pharmacy Dispensed Revenue</span>
-                        <strong>${Number(stats.revenue?.total_medicine_revenue || 0).toLocaleString()}</strong>
+                        <strong>₹{Number(stats.revenue?.total_medicine_revenue || 0).toLocaleString('en-IN')}</strong>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem 0 0', fontSize: '1.1rem' }}>
                         <span style={{ fontWeight: 800 }}>Net Gross Collected</span>
-                        <strong style={{ color: '#16a34a' }}>${Number(stats.revenue?.total_revenue ?? stats.revenue?.total ?? 0).toLocaleString()}</strong>
+                        <strong style={{ color: '#16a34a' }}>₹{Number(stats.revenue?.total_revenue ?? stats.revenue?.total ?? 0).toLocaleString('en-IN')}</strong>
                       </div>
                     </div>
                   </div>
@@ -1317,7 +1315,7 @@ export default function App() {
                             <td><span className="badge accepted">{doc.specialization}</span></td>
                             <td>{doc.contact_no}</td>
                             <td>{doc.email}</td>
-                            <td><strong>${Number(doc.fee ?? doc.fees ?? 0).toFixed(0)}</strong></td>
+                            <td><strong>₹{Number(doc.fee ?? doc.fees ?? 0).toLocaleString('en-IN')}</strong></td>
                             <td>
                               <button onClick={() => handleDeleteDoctor(doc.doctor_id)} className="btn btn-danger btn-sm">
                                 <Trash2 size={14} /> Remove
@@ -1585,7 +1583,7 @@ export default function App() {
                                     <td>#{idx + 1}</td>
                                     <td><strong>{m.name}</strong></td>
                                     <td><span className="badge" style={{ background: '#f1f5f9', color: '#475569' }}>{m.type}</span></td>
-                                    <td>${Number(m.price_per_unit || 0).toFixed(2)}</td>
+                                    <td>₹{Number(m.price_per_unit || 0).toFixed(2)}</td>
                                     <td>
                                       <span
                                         className={`badge ${isExpired ? 'expired' : isLow ? 'low-stock' : 'accepted'}`}
@@ -2076,7 +2074,7 @@ export default function App() {
                                   {r.to_doctor_specialization || 'Specialist'}
                                 </span>
                               </td>
-                              <td>${Number(r.to_doctor_fee || 0).toFixed(2)}</td>
+                              <td>₹{Number(r.to_doctor_fee || 0).toFixed(2)}</td>
                               <td style={{ whiteSpace: 'nowrap' }}>
                                 {new Date(r.refer_date).toLocaleDateString()}
                               </td>
@@ -2129,7 +2127,7 @@ export default function App() {
 
               {/* Patient Tab 1: Find Doctors */}
               {activeTab === 'doctors' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
+                <div className="doctor-cards-grid">
                   {patientDoctors.map((doc, idx) => (
                     <div key={doc.doctor_id} className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                       <div>
@@ -2155,7 +2153,7 @@ export default function App() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
                         <div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>CONSULTATION FEE</div>
-                          <strong style={{ fontSize: '1.25rem', color: 'var(--primary)' }}>${Number(doc.fee ?? doc.fees ?? 0).toFixed(0)}</strong>
+                          <strong style={{ fontSize: '1.25rem', color: 'var(--primary)' }}>₹{Number(doc.fee ?? doc.fees ?? 0).toLocaleString('en-IN')}</strong>
                         </div>
                         <button onClick={() => setBookModal({ open: true, doctor: doc })} className="btn btn-primary btn-sm">
                           <Calendar size={14} /> Book Appointment
@@ -2194,7 +2192,7 @@ export default function App() {
                             <td><span className="badge accepted">{a.specialization}</span></td>
                             <td>{new Date(a.appointment_date).toLocaleDateString()}</td>
                             <td>{a.diagnosis}</td>
-                            <td>${Number(a.fee ?? a.fees ?? 0).toFixed(0)}</td>
+                            <td>₹{Number(a.fee ?? a.fees ?? 0).toLocaleString('en-IN')}</td>
                             <td>
                               <span className={`badge ${a.status?.toLowerCase().includes('pending') ? 'pending' : a.status?.toLowerCase().includes('accept') ? 'accepted' : 'completed'}`}>
                                 {a.status}
@@ -2329,9 +2327,9 @@ export default function App() {
                                   {new Date(b.bill_date || Date.now()).toLocaleDateString()}
                                 </div>
                               </td>
-                              <td>${Number(b.doctor_fee).toFixed(2)}</td>
-                              <td>${Number(b.total_medicine_cost).toFixed(2)}</td>
-                              <td><strong style={{ color: '#16a34a', fontSize: '1.05rem' }}>${Number(b.total_amount).toFixed(2)}</strong></td>
+                              <td>₹{Number(b.doctor_fee).toFixed(2)}</td>
+                              <td>₹{Number(b.total_medicine_cost).toFixed(2)}</td>
+                              <td><strong style={{ color: '#16a34a', fontSize: '1.05rem' }}>₹{Number(b.total_amount).toFixed(2)}</strong></td>
                               <td>
                                 <span className={`badge ${b.payment_status?.toLowerCase()}`}>
                                   {b.payment_status}
@@ -2673,7 +2671,7 @@ export default function App() {
                                 </div>
                               </td>
                               <td>{m.type}</td>
-                              <td>${Number(m.price_per_unit).toFixed(2)}</td>
+                              <td>₹{Number(m.price_per_unit).toFixed(2)}</td>
                               <td>
                                 <span
                                   className={`badge ${isExpired ? 'expired' : isLow ? 'low-stock' : 'accepted'}`}
@@ -3068,15 +3066,15 @@ export default function App() {
                 <div style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: 12, marginBottom: '1.25rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                     <span style={{ color: 'var(--text-muted)' }}>Doctor Consultation Fee:</span>
-                    <strong>${payModal.bill.doctor_fee}</strong>
+                    <strong>₹{payModal.bill.doctor_fee}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                     <span style={{ color: 'var(--text-muted)' }}>Pharmacy Medication:</span>
-                    <strong>${payModal.bill.total_medicine_cost}</strong>
+                    <strong>₹{payModal.bill.total_medicine_cost}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: 8, fontSize: '1.15rem' }}>
                     <span style={{ fontWeight: 800 }}>Total Amount Due:</span>
-                    <strong style={{ color: '#16a34a' }}>${payModal.bill.total_amount}</strong>
+                    <strong style={{ color: '#16a34a' }}>₹{payModal.bill.total_amount}</strong>
                   </div>
                 </div>
 
@@ -3172,7 +3170,7 @@ export default function App() {
                     {docErrors.contact_no && <div className="field-error-msg"><AlertCircle size={13} /> {docErrors.contact_no}</div>}
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Consultation Fee ($)</label>
+                    <label className="form-label">Consultation Fee (₹)</label>
                     <input
                       type="number"
                       required
@@ -3706,7 +3704,7 @@ export default function App() {
                       </select>
                       <div style={{ display: 'flex', gap: '0.75rem', marginTop: 6, fontSize: '0.78rem', color: '#3b82f6' }}>
                         <span>Stock: <strong>{activeStock} units</strong></span>
-                        <span>Price: <strong>${activePrice.toFixed(2)}</strong></span>
+                        <span>Price: <strong>₹{activePrice.toFixed(2)}</strong></span>
                         <span>Expiry: <strong>{activeExpiry ? new Date(activeExpiry).toLocaleDateString() : '—'}</strong></span>
                       </div>
                     </div>
@@ -3737,7 +3735,7 @@ export default function App() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.85rem', paddingTop: '0.75rem', borderTop: '1px dashed #93c5fd' }}>
                     <div>
                       <span style={{ fontSize: '0.82rem', color: '#1e40af' }}>Total Medication Bill: </span>
-                      <strong style={{ fontSize: '1.05rem', color: 'var(--primary)' }}>${totalDispenseCost}</strong>
+                      <strong style={{ fontSize: '1.05rem', color: 'var(--primary)' }}>₹{totalDispenseCost}</strong>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: 5 }}>({currentQty} × ${activePrice.toFixed(2)})</span>
                     </div>
                     <div>
@@ -3907,7 +3905,7 @@ export default function App() {
                       </td>
                       <td style={{ padding: '0.65rem 0.85rem', textAlign: 'center' }}>1</td>
                       <td style={{ padding: '0.65rem 0.85rem', textAlign: 'right', fontWeight: 600 }}>
-                        ${Number(b.doctor_fee || 0).toFixed(2)}
+                        ₹{Number(b.doctor_fee || 0).toFixed(2)}
                       </td>
                     </tr>
                     <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
@@ -3922,7 +3920,7 @@ export default function App() {
                         {b.medicine_quantity || 1} units
                       </td>
                       <td style={{ padding: '0.65rem 0.85rem', textAlign: 'right', fontWeight: 600 }}>
-                        ${Number(b.total_medicine_cost || 0).toFixed(2)}
+                        ₹{Number(b.total_medicine_cost || 0).toFixed(2)}
                       </td>
                     </tr>
                     <tr style={{ background: '#fafafa' }}>
@@ -3932,7 +3930,7 @@ export default function App() {
                       </td>
                       <td style={{ padding: '0.65rem 0.85rem', textAlign: 'center', color: '#64748b' }}>1</td>
                       <td style={{ padding: '0.65rem 0.85rem', textAlign: 'right', color: '#64748b' }}>
-                        $0.00
+                        ₹0.00
                       </td>
                     </tr>
                   </tbody>
@@ -3960,15 +3958,15 @@ export default function App() {
                 <div style={{ background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: 8, border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4 }}>
                     <span style={{ color: '#64748b' }}>Gross Subtotal:</span>
-                    <span>${Number(b.total_amount || 0).toFixed(2)}</span>
+                    <span>₹{Number(b.total_amount || 0).toFixed(2)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4 }}>
                     <span style={{ color: '#64748b' }}>Applicable GST / Tax:</span>
-                    <span>$0.00 (Included)</span>
+                    <span>₹0.00 (Included)</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #e2e8f0', paddingTop: 6, fontSize: '1.15rem' }}>
                     <strong style={{ color: '#0f172a' }}>Total Paid:</strong>
-                    <strong style={{ color: '#16a34a' }}>${Number(b.total_amount || 0).toFixed(2)}</strong>
+                    <strong style={{ color: '#16a34a' }}>₹{Number(b.total_amount || 0).toFixed(2)}</strong>
                   </div>
                 </div>
               </div>
