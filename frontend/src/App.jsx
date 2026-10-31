@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Truck, Package, Filter,
   Shield, Stethoscope, Users, Pill, Calendar, DollarSign,
   Activity, CheckCircle2, Clock, Search, Plus,
   Trash2, ArrowRight, LogOut, Check, X,
@@ -115,6 +116,12 @@ export default function App() {
   const [verifyRxModal, setVerifyRxModal] = useState({ open: false, rx: null });
   const [verifyDispenseQty, setVerifyDispenseQty] = useState('');
   const [verifyDispenseMedId, setVerifyDispenseMedId] = useState('');
+
+  // Admin Stock & Pharmacist Subtab/Filter State
+  const [adminStockSubTab, setAdminStockSubTab] = useState('approvals');
+  const [medicineSearch, setMedicineSearch] = useState('');
+  const [medicineFilter, setMedicineFilter] = useState('all');
+  const [queueFilter, setQueueFilter] = useState('all');
 
   // Admin Stock Quick Inward & Vendor Procurement
   const [adminStockInputs, setAdminStockInputs] = useState({});
@@ -1426,304 +1433,420 @@ export default function App() {
                 const expiredList = medicines.filter((m) => m.status === 'EXPIRED' || (m.expiry_date && new Date(m.expiry_date).getTime() < Date.now()));
                 const lowStockList = medicines.filter((m) => (Number(m.stock_quantity) <= 20 || m.status === 'LOW_STOCK') && !(m.status === 'EXPIRED' || (m.expiry_date && new Date(m.expiry_date).getTime() < Date.now())));
 
+                // Filter medicines for formulary sub-tab
+                const filteredMeds = medicines.filter((m) => {
+                  const isExpired = m.status === 'EXPIRED' || (m.expiry_date && new Date(m.expiry_date).getTime() < Date.now());
+                  const isLow = !isExpired && (Number(m.stock_quantity) <= 20 || m.status === 'LOW_STOCK');
+                  if (medicineFilter === 'low' && !isLow) return false;
+                  if (medicineFilter === 'expired' && !isExpired) return false;
+                  if (medicineFilter === 'ok' && (isLow || isExpired)) return false;
+                  if (medicineSearch.trim()) {
+                    const q = medicineSearch.toLowerCase().trim();
+                    return m.name.toLowerCase().includes(q) || (m.type && m.type.toLowerCase().includes(q));
+                  }
+                  return true;
+                });
+
                 return (
                   <div>
-                    {/* Critical Expired Medicines Alert Banner (Safety Protocol) */}
-                    {expiredList.length > 0 && (
-                      <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 14, padding: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-start', gap: '1rem', boxShadow: '0 4px 12px rgba(220,38,38,0.08)' }}>
-                        <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fee2e2', display: 'grid', placeItems: 'center', color: '#dc2626', flexShrink: 0 }}>
-                          <AlertTriangle size={24} />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem' }}>
-                            <strong style={{ color: '#991b1b', fontSize: '1rem' }}>
-                              🚨 Hospital Medication Expiry Alert ({expiredList.length} Expired Drugs)
-                            </strong>
-                            <span className="badge" style={{ background: '#dc2626', color: 'white', fontWeight: 800 }}>
-                              Dispense Blocked
-                            </span>
+                    {/* Compact KPI Metric Strip */}
+                    <div className="metric-strip">
+                      <div className="metric-pill-card">
+                        <div>
+                          <div className="label">Restock Approvals</div>
+                          <div className="val" style={{ color: pendingReqs.length > 0 ? '#b45309' : '#15803d' }}>
+                            {pendingReqs.length} Pending
                           </div>
-                          <p style={{ color: '#b91c1c', fontSize: '0.875rem', margin: 0, lineHeight: 1.5 }}>
-                            The following medications have exceeded their manufacturer expiration date:
-                            {' '}
-                            <strong>{expiredList.map((m) => `${m.name} (Exp: ${new Date(m.expiry_date).toLocaleDateString()})`).join(', ')}</strong>.
-                            Per hospital regulatory safety protocols, pharmacists are strictly prevented from dispensing these items. Please initiate disposal protocols and re-procure active stock.
-                          </p>
                         </div>
+                        <span className={`badge ${pendingReqs.length > 0 ? 'pending' : 'ok'}`}>
+                          {pendingReqs.length > 0 ? 'Action Needed' : 'Cleared'}
+                        </span>
                       </div>
-                    )}
 
-                    {/* Low Stock Critical Alert Banner (Threshold: <= 20 units) */}
-                    {lowStockList.length > 0 && (
-                      <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 14, padding: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-start', gap: '1rem', boxShadow: '0 4px 12px rgba(217,119,6,0.08)' }}>
-                        <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fef3c7', display: 'grid', placeItems: 'center', color: '#d97706', flexShrink: 0 }}>
-                          <AlertCircle size={24} />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.25rem' }}>
-                            <strong style={{ color: '#92400e', fontSize: '1rem' }}>
-                              ⚠️ Hospital Low Stock Alert (Threshold: ≤ 20 Units)
-                            </strong>
-                            <span className="badge low-stock" style={{ fontWeight: 700 }}>
-                              {lowStockList.length} Medicine{lowStockList.length > 1 ? 's' : ''} Critical
-                            </span>
+                      <div className="metric-pill-card">
+                        <div>
+                          <div className="label">Safety Threshold</div>
+                          <div className="val" style={{ color: lowStockList.length > 0 ? '#dc2626' : '#15803d' }}>
+                            {lowStockList.length} Low-Stock
                           </div>
-                          <p style={{ color: '#b45309', fontSize: '0.875rem', margin: 0, lineHeight: 1.5 }}>
-                            The following medicines have reached or fallen below the safety limit of <strong>20 units</strong>:
-                            {' '}
-                            <strong>{lowStockList.map((m) => `${m.name} (${m.stock_quantity} left)`).join(', ')}</strong>.
-                            Review dispensary requests below or initiate restock procurement to ensure continuous pharmacy operations.
-                          </p>
                         </div>
+                        <span className={`badge ${lowStockList.length > 0 ? 'low-stock' : 'ok'}`}>
+                          {lowStockList.length > 0 ? '≤ 20 Units' : 'Optimal'}
+                        </span>
                       </div>
-                    )}
 
-                    {/* Pending Dispensary Restock Approvals */}
-                    <div className="card" style={{ marginBottom: '1.5rem' }}>
-                      <div className="card-header">
-                        <div className="card-title">Pending Dispensary Restock Approvals</div>
-                        <span className="badge pending">{pendingReqs.length} Pending</span>
+                      <div className="metric-pill-card">
+                        <div>
+                          <div className="label">Expired Batches</div>
+                          <div className="val" style={{ color: expiredList.length > 0 ? '#dc2626' : '#15803d' }}>
+                            {expiredList.length} Blocked
+                          </div>
+                        </div>
+                        <span className={`badge ${expiredList.length > 0 ? 'expired' : 'ok'}`}>
+                          {expiredList.length > 0 ? 'Dispense Blocked' : 'Zero Expired'}
+                        </span>
                       </div>
-                      <div className="table-responsive">
-                        <table className="data-table">
-                          <thead>
-                            <tr>
-                              <th>Req #</th>
-                              <th>Medicine</th>
-                              <th>Current Units</th>
-                              <th>Requested Restock</th>
-                              <th>Requested By</th>
-                              <th>Date</th>
-                              <th>Action</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {pendingReqs.length === 0 ? (
-                              <tr>
-                                <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                                  No pending restock requests from dispensary chemists.
-                                </td>
-                              </tr>
-                            ) : (
-                              pendingReqs.map((r, idx) => (
-                                <tr key={r.request_id}>
-                                  <td>#{idx + 1}</td>
-                                  <td><strong>{r.medicine_name}</strong></td>
-                                  <td><span className="badge low-stock">{r.current_stock} left</span></td>
-                                  <td><strong>+{r.requested_quantity} units</strong></td>
-                                  <td>{r.pharmacist_name || 'Dispensary Chemist'}</td>
-                                  <td>{new Date(r.reorder_date || r.request_date).toLocaleDateString()}</td>
-                                  <td>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                      <button onClick={() => handleReorderAction(r.request_id, 'approve')} className="btn btn-success btn-sm">
-                                        <Check size={14} /> Approve
-                                      </button>
-                                      <button onClick={() => handleReorderAction(r.request_id, 'reject')} className="btn btn-danger btn-sm">
-                                        <X size={14} /> Reject
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))
-                            )}
-                          </tbody>
-                        </table>
+
+                      <div className="metric-pill-card">
+                        <div>
+                          <div className="label">Inward Consignments</div>
+                          <div className="val" style={{ color: 'var(--primary)' }}>
+                            {procurementHistory.length} Batches
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => openProcureModal(null)}
+                          className="btn btn-primary btn-sm"
+                          style={{ padding: '0.35rem 0.65rem' }}>
+                          <ShoppingCart size={13} /> + Procure
+                        </button>
                       </div>
                     </div>
 
-                    {/* Full Hospital Medicine Stock Ledger */}
-                    <div className="card">
-                      <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-                        <div>
-                          <div className="card-title">Hospital Medicine Inventory & Stock Ledger</div>
-                          <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: 0 }}>
-                            Track active stock units, expiry safety protocols, and order consignments from verified pharmaceutical suppliers.
-                          </p>
+                    {/* Clean Sub-Tabs Switcher */}
+                    <div className="subtab-nav">
+                      <button
+                        type="button"
+                        onClick={() => setAdminStockSubTab('approvals')}
+                        className={`subtab-btn ${adminStockSubTab === 'approvals' ? 'active' : ''}`}>
+                        <CheckCircle2 size={15} /> Restock Approvals ({pendingReqs.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAdminStockSubTab('inventory')}
+                        className={`subtab-btn ${adminStockSubTab === 'inventory' ? 'active' : ''}`}>
+                        <Pill size={15} /> Medicine Formulary & Stock ({medicines.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAdminStockSubTab('procurement')}
+                        className={`subtab-btn ${adminStockSubTab === 'procurement' ? 'active' : ''}`}>
+                        <Truck size={15} /> Vendor Procurement Ledger ({procurementHistory.length})
+                      </button>
+                    </div>
+
+                    {/* Subtab 1: Pending Restock Approvals */}
+                    {adminStockSubTab === 'approvals' && (
+                      <div>
+                        <div className="card">
+                          <div className="card-header">
+                            <div>
+                              <div className="card-title">Dispensary Restock Requests Awaiting Approval</div>
+                              <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                Review and approve pharmacy replenishment requisitions submitted by hospital pharmacists
+                              </p>
+                            </div>
+                            <span className="badge pending">{pendingReqs.length} Requests Pending</span>
+                          </div>
+                          <div className="table-responsive">
+                            <table className="data-table">
+                              <thead>
+                                <tr>
+                                  <th>Req #</th>
+                                  <th>Medicine Name</th>
+                                  <th>Current Units</th>
+                                  <th>Requested Stock</th>
+                                  <th>Requested By</th>
+                                  <th>Requisition Date</th>
+                                  <th>Executive Action</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {pendingReqs.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={7} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                                      <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                                        <CheckCircle2 size={32} color="#16a34a" />
+                                        <strong style={{ color: 'var(--text-main)' }}>All Restock Requests Cleared</strong>
+                                        <span style={{ fontSize: '0.85rem' }}>There are currently no pending replenishment requests from the dispensary.</span>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  pendingReqs.map((r, idx) => (
+                                    <tr key={r.request_id}>
+                                      <td><strong>#{idx + 1}</strong></td>
+                                      <td><strong style={{ color: 'var(--primary)' }}>{r.medicine_name}</strong></td>
+                                      <td><span className="badge low-stock">{r.current_stock} left</span></td>
+                                      <td><span className="badge ok">+{r.requested_quantity} units</span></td>
+                                      <td>{r.pharmacist_name || 'Dispensary Pharmacist'}</td>
+                                      <td>{new Date(r.reorder_date || r.request_date).toLocaleDateString()}</td>
+                                      <td>
+                                        <div style={{ display: 'flex', gap: '0.45rem' }}>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleReorderAction(r.request_id, 'approve')}
+                                            className="btn btn-success btn-sm">
+                                            <Check size={13} /> Approve
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleReorderAction(r.request_id, 'reject')}
+                                            className="btn btn-danger btn-sm">
+                                            <X size={13} /> Reject
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <span className="badge completed">{medicines.length} Medicines Monitored</span>
-                          <button
-                            type="button"
-                            className="btn btn-primary btn-sm"
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                            onClick={() => openProcureModal(null)}
-                          >
-                            <ShoppingCart size={14} /> Procure Inward Consignment
-                          </button>
+
+                        {/* Regulatory Safety Advisory Summary Card */}
+                        {(lowStockList.length > 0 || expiredList.length > 0) && (
+                          <div className="card" style={{ borderLeft: '4px solid #f59e0b', background: '#fffdfa' }}>
+                            <div className="card-header" style={{ background: 'transparent' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <AlertTriangle size={18} color="#d97706" />
+                                <strong style={{ color: '#92400e' }}>Active Regulatory Compliance Alerts</strong>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => openProcureModal(null)}
+                                className="btn btn-primary btn-sm">
+                                <ShoppingCart size={13} /> Procure Fresh Consignment
+                              </button>
+                            </div>
+                            <div className="card-body" style={{ paddingTop: 0 }}>
+                              {lowStockList.length > 0 && (
+                                <p style={{ fontSize: '0.85rem', color: '#b45309', marginBottom: '0.5rem' }}>
+                                  ⚠️ <strong>{lowStockList.length} medicines</strong> at or below safety limit (≤ 20 units):{' '}
+                                  {lowStockList.map((m) => `${m.name} (${m.stock_quantity})`).join(', ')}.
+                                </p>
+                              )}
+                              {expiredList.length > 0 && (
+                                <p style={{ fontSize: '0.85rem', color: '#dc2626', margin: 0 }}>
+                                  ⛔ <strong>{expiredList.length} medications</strong> expired and blocked from dispensary fulfillment:{' '}
+                                  {expiredList.map((m) => m.name).join(', ')}.
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Subtab 2: Medicine Formulary & Stock */}
+                    {adminStockSubTab === 'inventory' && (
+                      <div className="card">
+                        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                          <div>
+                            <div className="card-title">Hospital Medicine Inventory & Stock Ledger</div>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: 0 }}>
+                              Active formulary units, batch safety thresholds, and direct consignment procurement
+                            </p>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <div className="filter-bar">
+                              <button
+                                type="button"
+                                onClick={() => setMedicineFilter('all')}
+                                className={`filter-chip ${medicineFilter === 'all' ? 'active' : ''}`}>
+                                All ({medicines.length})
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setMedicineFilter('ok')}
+                                className={`filter-chip ${medicineFilter === 'ok' ? 'active' : ''}`}>
+                                In Stock
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setMedicineFilter('low')}
+                                className={`filter-chip ${medicineFilter === 'low' ? 'active' : ''}`}>
+                                Low Stock ({lowStockList.length})
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setMedicineFilter('expired')}
+                                className={`filter-chip ${medicineFilter === 'expired' ? 'active' : ''}`}>
+                                Expired ({expiredList.length})
+                              </button>
+                            </div>
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-sm"
+                              onClick={() => openProcureModal(null)}>
+                              <ShoppingCart size={13} /> + Procure Stock
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Live Search Input */}
+                        <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--border)', background: '#f8fafc' }}>
+                          <div style={{ position: 'relative', maxWidth: 360 }}>
+                            <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                            <input
+                              type="text"
+                              value={medicineSearch}
+                              onChange={(e) => setMedicineSearch(e.target.value)}
+                              placeholder="Filter medicines by name or type..."
+                              className="form-input"
+                              style={{ paddingLeft: 32, paddingRight: 10, height: 34, fontSize: '0.825rem' }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="table-responsive">
+                          <table className="data-table">
+                            <thead>
+                              <tr>
+                                <th>#</th>
+                                <th>Medicine Name</th>
+                                <th>Category</th>
+                                <th>Unit Price</th>
+                                <th>Current Stock</th>
+                                <th>Batch Expiry</th>
+                                <th>Stock Status</th>
+                                <th>Procurement Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredMeds.length === 0 ? (
+                                <tr>
+                                  <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                                    No medicines match your filter criteria.
+                                  </td>
+                                </tr>
+                              ) : (
+                                filteredMeds.map((m, idx) => {
+                                  const isExpired = m.status === 'EXPIRED' || (m.expiry_date && new Date(m.expiry_date).getTime() < Date.now());
+                                  const isLow = !isExpired && (Number(m.stock_quantity) <= 20 || m.status === 'LOW_STOCK');
+                                  return (
+                                    <tr key={m.medicine_id}>
+                                      <td>#{idx + 1}</td>
+                                      <td><strong>{m.name}</strong></td>
+                                      <td><span className="badge" style={{ background: '#f1f5f9', color: '#475569' }}>{m.type}</span></td>
+                                      <td>₹{Number(m.price_per_unit || 0).toFixed(2)}</td>
+                                      <td>
+                                        <span className={`badge ${isExpired ? 'expired' : isLow ? 'low-stock' : 'accepted'}`}>
+                                          {m.stock_quantity} units
+                                        </span>
+                                      </td>
+                                      <td style={isExpired ? { color: '#dc2626', fontWeight: 700 } : {}}>
+                                        {m.expiry_date ? new Date(m.expiry_date).toLocaleDateString() : '—'}
+                                      </td>
+                                      <td>
+                                        {isExpired ? (
+                                          <span className="badge expired">⛔ EXPIRED</span>
+                                        ) : isLow ? (
+                                          <span className="badge low-stock">⚠️ LOW STOCK</span>
+                                        ) : (
+                                          <span className="badge accepted">✓ IN STOCK</span>
+                                        )}
+                                      </td>
+                                      <td>
+                                        <button
+                                          type="button"
+                                          className={`btn btn-sm ${isExpired ? 'btn-danger' : 'btn-primary'}`}
+                                          style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem' }}
+                                          onClick={() => openProcureModal(m)}>
+                                          <ShoppingCart size={12} /> {isExpired ? 'Replace Batch' : 'Procure Stock'}
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  );
+                                })
+                              )}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
-                      <div className="table-responsive">
-                        <table className="data-table">
-                          <thead>
-                            <tr>
-                              <th>#</th>
-                              <th>Medicine Name</th>
-                              <th>Form / Type</th>
-                              <th>Unit Price</th>
-                              <th>Current Stock</th>
-                              <th>Safety Threshold</th>
-                              <th>Batch Expiry</th>
-                              <th>Stock Status</th>
-                              <th>Supplier Procurement</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {medicines.length === 0 ? (
+                    )}
+
+                    {/* Subtab 3: Inward Procurement Ledger */}
+                    {adminStockSubTab === 'procurement' && (
+                      <div className="card">
+                        <div className="card-header">
+                          <div>
+                            <div className="card-title">Hospital Medicine Procurement & Inward Stock Ledger</div>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: 0 }}>
+                              Verified vendor inward records, batch numbers, supplier invoices, and regulatory audit trail
+                            </p>
+                          </div>
+                          <span className="badge accepted">📦 {procurementHistory.length} Inward Consignments</span>
+                        </div>
+                        <div className="table-responsive">
+                          <table className="data-table">
+                            <thead>
                               <tr>
-                                <td colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                                  No medicine inventory records found.
-                                </td>
+                                <th>Consignment #</th>
+                                <th>Medicine Name</th>
+                                <th>Vendor / Supplier</th>
+                                <th>Batch & Invoice</th>
+                                <th>Quantity</th>
+                                <th>Fresh Expiry</th>
+                                <th>Stock Transition</th>
+                                <th>Procured By</th>
                               </tr>
-                            ) : (
-                              medicines.map((m, idx) => {
-                                const isExpired = m.status === 'EXPIRED' || (m.expiry_date && new Date(m.expiry_date).getTime() < Date.now());
-                                const isLow = !isExpired && (Number(m.stock_quantity) <= 20 || m.status === 'LOW_STOCK');
-                                return (
-                                  <tr key={m.medicine_id}>
-                                    <td>#{idx + 1}</td>
-                                    <td><strong>{m.name}</strong></td>
-                                    <td><span className="badge" style={{ background: '#f1f5f9', color: '#475569' }}>{m.type}</span></td>
-                                    <td>₹{Number(m.price_per_unit || 0).toFixed(2)}</td>
+                            </thead>
+                            <tbody>
+                              {procurementHistory.length === 0 ? (
+                                <tr>
+                                  <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                                    No inward procurement consignments recorded yet.
+                                  </td>
+                                </tr>
+                              ) : (
+                                procurementHistory.map((item) => (
+                                  <tr key={item.procurement_id}>
                                     <td>
-                                      <span
-                                        className={`badge ${isExpired ? 'expired' : isLow ? 'low-stock' : 'accepted'}`}
-                                        style={isExpired ? { fontWeight: 800, color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca' } : isLow ? { fontWeight: 800, color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca' } : {}}>
-                                        {m.stock_quantity} units
+                                      <strong>#{item.procurement_id}</strong>
+                                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                        {item.created_at ? new Date(item.created_at).toLocaleDateString() : '—'}
+                                      </div>
+                                    </td>
+                                    <td><strong>{item.medicine_name}</strong></td>
+                                    <td>
+                                      <span className="badge" style={{ background: '#eff6ff', color: '#1d4ed8' }}>
+                                        🏢 {item.supplier_name}
                                       </span>
                                     </td>
-                                    <td>20 units (Min)</td>
-                                    <td style={isExpired ? { color: '#dc2626', fontWeight: 700 } : {}}>
-                                      {m.expiry_date ? new Date(m.expiry_date).toLocaleDateString() : '—'}
+                                    <td>
+                                      <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>{item.batch_number}</div>
+                                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Inv: {item.invoice_no}</div>
                                     </td>
                                     <td>
-                                      {isExpired ? (
-                                        <span className="badge" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontWeight: 800 }}>
-                                          ⛔ EXPIRED
-                                        </span>
-                                      ) : isLow ? (
-                                        <span className="badge low-stock" style={{ fontWeight: 800 }}>
-                                          ⚠️ LOW STOCK
-                                        </span>
+                                      <span className="badge ok">+{item.quantity} units</span>
+                                    </td>
+                                    <td>
+                                      <strong style={{ color: '#047857' }}>
+                                        {item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : '—'}
+                                      </strong>
+                                    </td>
+                                    <td>
+                                      {Number(item.disposed_expired_units) > 0 ? (
+                                        <div>
+                                          <span className="badge expired" style={{ fontSize: '0.72rem', marginBottom: 2 }}>
+                                            Disposed {item.disposed_expired_units}
+                                          </span>
+                                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                                            New: <strong>{item.new_stock} units</strong>
+                                          </div>
+                                        </div>
                                       ) : (
-                                        <span className="badge accepted">
-                                          ✓ IN STOCK
+                                        <span style={{ fontSize: '0.82rem' }}>
+                                          {item.previous_stock} ➔ <strong>{item.new_stock} units</strong>
                                         </span>
                                       )}
                                     </td>
                                     <td>
-                                      <button
-                                        type="button"
-                                        className={`btn btn-sm ${isExpired ? 'btn-danger' : 'btn-primary'}`}
-                                        style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}
-                                        onClick={() => openProcureModal(m)}
-                                        title={`Procure fresh consignment from supplier for ${m.name}`}
-                                      >
-                                        <ShoppingCart size={13} />
-                                        {isExpired ? 'Procure & Replace Batch' : 'Procure Stock'}
-                                      </button>
+                                      <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                                        {item.procured_by || 'Hospital Admin'}
+                                      </span>
                                     </td>
                                   </tr>
-                                );
-                              })
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    {/* Hospital Medicine Procurement & Inward Stock Ledger */}
-                    <div className="card" style={{ marginTop: '1.5rem' }}>
-                      <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-                        <div>
-                          <div className="card-title">Hospital Medicine Procurement & Inward Stock Ledger</div>
-                          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: 4, margin: 0 }}>
-                            Official vendor inward records, batch tracking, replacement of expired batches, and supplier invoices.
-                          </p>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
                         </div>
-                        <span className="badge accepted" style={{ fontSize: '0.85rem', padding: '0.35rem 0.75rem' }}>
-                          📦 {procurementHistory.length} Inward Consignments
-                        </span>
                       </div>
-                      <div className="table-responsive">
-                        <table className="data-table">
-                          <thead>
-                            <tr>
-                              <th>ID / Date</th>
-                              <th>Medicine</th>
-                              <th>Vendor / Supplier</th>
-                              <th>Batch & Invoice</th>
-                              <th>Quantity</th>
-                              <th>Fresh Expiry</th>
-                              <th>Stock Transition / Notes</th>
-                              <th>Procured By</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {procurementHistory.length === 0 ? (
-                              <tr>
-                                <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                                  No inward procurement consignments recorded yet.
-                                </td>
-                              </tr>
-                            ) : (
-                              procurementHistory.map((item) => (
-                                <tr key={item.procurement_id}>
-                                  <td>
-                                    <div style={{ fontWeight: 700 }}>#{item.procurement_id}</div>
-                                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                                      {item.created_at ? new Date(item.created_at).toLocaleString() : '—'}
-                                    </div>
-                                  </td>
-                                  <td>
-                                    <strong>{item.medicine_name}</strong>
-                                  </td>
-                                  <td>
-                                    <span className="badge" style={{ background: '#eff6ff', color: '#1d4ed8', fontWeight: 600 }}>
-                                      🏢 {item.supplier_name}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{item.batch_number}</div>
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Inv: {item.invoice_no}</div>
-                                  </td>
-                                  <td>
-                                    <span className="badge" style={{ background: '#ecfdf5', color: '#047857', fontWeight: 700 }}>
-                                      +{item.quantity} units
-                                    </span>
-                                  </td>
-                                  <td>
-                                    <strong style={{ color: '#047857' }}>
-                                      {item.expiry_date ? new Date(item.expiry_date).toLocaleDateString() : '—'}
-                                    </strong>
-                                  </td>
-                                  <td>
-                                    {Number(item.disposed_expired_units) > 0 ? (
-                                      <div>
-                                        <span className="badge" style={{ background: '#fef2f2', color: '#b91c1c', fontSize: '0.75rem', marginBottom: 2 }}>
-                                          ⛔ Disposed {item.disposed_expired_units} expired
-                                        </span>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                          New Active: <strong>{item.new_stock} units</strong>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <span style={{ fontSize: '0.85rem' }}>
-                                        {item.previous_stock} ➔ <strong>{item.new_stock} units</strong>
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td>
-                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                                      {item.procured_by || 'Hospital Administrator'}
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 );
               })()}
@@ -2390,234 +2513,233 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Pharmacist Critical Expired Medicine Warning Alert */}
+              {/* Pharmacist Dispensary Health Strip */}
               {(() => {
                 const expiredMeds = (inventoryList || []).filter(
                   (m) => m.status === 'EXPIRED' || (m.expiry_date && new Date(m.expiry_date).getTime() < Date.now())
                 );
-                if (expiredMeds.length === 0) return null;
-                return (
-                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 14, padding: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', boxShadow: '0 4px 12px rgba(220,38,38,0.08)' }}>
-                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fee2e2', display: 'grid', placeItems: 'center', color: '#dc2626', flexShrink: 0 }}>
-                        <AlertTriangle size={24} />
-                      </div>
-                      <div>
-                        <strong style={{ color: '#991b1b', fontSize: '1rem', display: 'block', marginBottom: '0.25rem' }}>
-                          🚨 Critical Dispensary Alert: {expiredMeds.length} Expired Medication(s) in Stock!
-                        </strong>
-                        <p style={{ color: '#b91c1c', fontSize: '0.875rem', margin: 0, lineHeight: 1.5 }}>
-                          Expired Medicines: <strong>{expiredMeds.map((m) => `${m.name} (Exp: ${new Date(m.expiry_date).toLocaleDateString()})`).join(', ')}</strong>.
-                          Dispensing expired medications is strictly blocked by clinical safety rules. Segregate expired batches and notify administration for replacement.
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        if (expiredMeds[0]) {
-                          setReorderForm({ medicine_id: expiredMeds[0].medicine_id, requested_quantity: 50 });
-                          setReorderModal(true);
-                        }
-                      }}
-                      className="btn btn-danger btn-sm"
-                      style={{ flexShrink: 0 }}>
-                      <ShoppingCart size={14} /> Request Restock
-                    </button>
-                  </div>
-                );
-              })()}
-
-              {/* Pharmacist Low Stock Warning Alert (≤ 20 Units) */}
-              {(() => {
                 const lowMeds = (inventoryList || []).filter(
                   (m) => (Number(m.stock_quantity) <= 20 || m.status === 'LOW_STOCK') &&
                          !(m.status === 'EXPIRED' || (m.expiry_date && new Date(m.expiry_date).getTime() < Date.now()))
                 );
-                if (lowMeds.length === 0) return null;
+
                 return (
-                  <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 14, padding: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', boxShadow: '0 4px 12px rgba(217,119,6,0.08)' }}>
-                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fef3c7', display: 'grid', placeItems: 'center', color: '#d97706', flexShrink: 0 }}>
-                        <AlertCircle size={24} />
+                  <div>
+                    {/* Compact Dispensary Metric Strip */}
+                    <div className="metric-strip">
+                      <div className="metric-pill-card">
+                        <div>
+                          <div className="label">Prescription Queue</div>
+                          <div className="val" style={{ color: 'var(--primary)' }}>
+                            {pendingPrescriptions.length} Orders
+                          </div>
+                        </div>
+                        <span className="badge pending">Awaiting Fulfillment</span>
                       </div>
-                      <div>
-                        <strong style={{ color: '#92400e', fontSize: '1rem', display: 'block', marginBottom: '0.25rem' }}>
-                          ⚠️ Dispensary Low Stock Alert (Threshold: ≤ 20 Units)
-                        </strong>
-                        <p style={{ color: '#b45309', fontSize: '0.875rem', margin: 0, lineHeight: 1.5 }}>
-                          {lowMeds.length} medicine(s) are running low (≤ 20 units remaining):
-                          {' '}
-                          <strong>{lowMeds.map((m) => `${m.name} (${m.stock_quantity} left)`).join(', ')}</strong>.
-                          Click <strong>Request Restock</strong> to send a restock replenishment order to Hospital Administration.
-                        </p>
+
+                      <div className="metric-pill-card">
+                        <div>
+                          <div className="label">Low Stock Warnings</div>
+                          <div className="val" style={{ color: lowMeds.length > 0 ? '#d97706' : '#15803d' }}>
+                            {lowMeds.length} Items
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setReorderModal(true)}
+                          className="btn btn-secondary btn-sm"
+                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>
+                          <ShoppingCart size={12} /> Restock
+                        </button>
+                      </div>
+
+                      <div className="metric-pill-card">
+                        <div>
+                          <div className="label">Safety Expiry Gate</div>
+                          <div className="val" style={{ color: expiredMeds.length > 0 ? '#dc2626' : '#15803d' }}>
+                            {expiredMeds.length > 0 ? `${expiredMeds.length} Blocked` : 'All Safe'}
+                          </div>
+                        </div>
+                        <span className={`badge ${expiredMeds.length > 0 ? 'expired' : 'ok'}`}>
+                          {expiredMeds.length > 0 ? 'Dispense Blocked' : 'Active'}
+                        </span>
                       </div>
                     </div>
-                    <button onClick={() => setReorderModal(true)} className="btn btn-primary btn-sm" style={{ flexShrink: 0 }}>
-                      <ShoppingCart size={14} /> Request Restock
-                    </button>
                   </div>
                 );
               })()}
 
-              {activeTab === 'queue' && (
-                <div className="card">
-                  <div className="card-header">
-                    <div>
-                      <div className="card-title">Pending Doctor Prescriptions Awaiting Clinical Fulfillment</div>
-                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        Verify doctor diagnosis, prescription date, and patient details before dispensing medication
-                      </p>
-                    </div>
-                    <span className="badge pending">{pendingPrescriptions.length} Orders</span>
-                  </div>
-                  <div className="table-responsive">
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>RX #</th>
-                          <th>Patient & Age</th>
-                          <th>Prescribing Doctor</th>
-                          <th>Prescribed Date</th>
-                          <th>Diagnosed Illness</th>
-                          <th>Medicine & Dosage</th>
-                          <th>Dispensary Stock</th>
-                          <th>Clinical Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pendingPrescriptions.length === 0 ? (
-                          <tr>
-                            <td colSpan={8} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
-                              No pending doctor prescriptions awaiting fulfillment.
-                            </td>
-                          </tr>
-                        ) : (
-                          pendingPrescriptions.map((p, idx) => {
-                            const isExp = p.expiry_date && new Date(p.expiry_date).getTime() < Date.now();
-                            const isShort = Number(p.current_stock || 0) < Number(p.quantity || 0);
-                            const isLow = !isShort && Number(p.current_stock || 0) <= 20;
+              {/* Pharmacist Dispense Queue Table */}
+              {activeTab === 'queue' && (() => {
+                const filteredQueue = pendingPrescriptions.filter((p) => {
+                  const isExp = p.expiry_date && new Date(p.expiry_date).getTime() < Date.now();
+                  const isShort = Number(p.current_stock || 0) < Number(p.quantity || 0);
+                  if (queueFilter === 'ready' && (isExp || isShort)) return false;
+                  if (queueFilter === 'short' && !isShort) return false;
+                  if (queueFilter === 'expired' && !isExp) return false;
+                  return true;
+                });
 
-                            return (
-                              <tr key={p.prescribed_id}>
-                                <td>#{idx + 1}</td>
-                                <td>
-                                  <strong>{p.patient_name}</strong>
-                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                    {p.patient_gender || '—'} {p.patient_dob ? `(${calculateAge(p.patient_dob)})` : ''}
-                                  </div>
-                                </td>
-                                <td>
-                                  <div>
-                                    <strong>{formatDoctorName(p.doctor_name)}</strong>
+                return (
+                  <div className="card">
+                    <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                      <div>
+                        <div className="card-title">Doctor Prescriptions Dispense Queue</div>
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                          Verify patient medical details, deduct stock inventory, and generate pharmacy discharge invoice
+                        </p>
+                      </div>
+
+                      {/* Queue Filter Bar */}
+                      <div className="filter-bar">
+                        <button
+                          type="button"
+                          onClick={() => setQueueFilter('all')}
+                          className={`filter-chip ${queueFilter === 'all' ? 'active' : ''}`}>
+                          All Orders ({pendingPrescriptions.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setQueueFilter('ready')}
+                          className={`filter-chip ${queueFilter === 'ready' ? 'active' : ''}`}>
+                          ✓ Ready to Dispense
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setQueueFilter('short')}
+                          className={`filter-chip ${queueFilter === 'short' ? 'active' : ''}`}>
+                          ⚠️ Short Stock
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="table-responsive">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Order #</th>
+                            <th>Patient Information</th>
+                            <th>Prescribing Doctor</th>
+                            <th>Diagnosed Illness</th>
+                            <th>Prescribed Medication</th>
+                            <th>Dispensary Stock</th>
+                            <th>Clinical Fulfillment</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredQueue.length === 0 ? (
+                            <tr>
+                              <td colSpan={7} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)' }}>
+                                <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                                  <CheckCircle2 size={32} color="#16a34a" />
+                                  <strong style={{ color: 'var(--text-main)' }}>No Pending Prescriptions</strong>
+                                  <span style={{ fontSize: '0.85rem' }}>All doctor prescriptions for this filter have been verified and dispensed.</span>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredQueue.map((p, idx) => {
+                              const isExp = p.expiry_date && new Date(p.expiry_date).getTime() < Date.now();
+                              const isShort = Number(p.current_stock || 0) < Number(p.quantity || 0);
+                              const isLow = !isShort && Number(p.current_stock || 0) <= 20;
+
+                              return (
+                                <tr key={p.prescribed_id}>
+                                  <td><strong>#{idx + 1}</strong></td>
+                                  <td>
+                                    <strong>{p.patient_name}</strong>
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                      {p.specialization || 'Consultant'}
+                                      {p.patient_gender || '—'} {p.patient_dob ? `(${calculateAge(p.patient_dob)})` : ''}
                                     </div>
-                                  </div>
-                                </td>
-                                <td style={{ whiteSpace: 'nowrap' }}>
-                                  {new Date(p.prescription_date).toLocaleDateString()}
-                                </td>
-                                <td>
-                                  <span className="badge" style={{ background: '#e0f2fe', color: '#0369a1', fontWeight: 700 }}>
-                                    🩺 {p.diagnosis || 'Clinical Consultation'}
-                                  </span>
-                                </td>
-                                <td>
-                                  <div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                      <strong style={{ color: 'var(--primary)', fontSize: '0.95rem' }}>{p.medicine_name}</strong>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setReorderForm({
-                                            medicine_id: p.medicine_id || '',
-                                            requested_quantity: 50,
-                                          });
-                                          setReorderModal(true);
-                                        }}
-                                        className="btn btn-secondary btn-sm"
-                                        style={{ padding: '0.15rem 0.45rem', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: 3 }}
-                                        title={`Raise restock replenishment request for ${p.medicine_name}`}>
-                                        <ShoppingCart size={11} /> Request Restock
-                                      </button>
+                                  </td>
+                                  <td>
+                                    <div>
+                                      <strong>{formatDoctorName(p.doctor_name)}</strong>
+                                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                        {p.specialization || 'Specialist'}
+                                      </div>
                                     </div>
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                      <strong>{p.quantity} units</strong> {p.dosage ? `(${p.dosage})` : ''}
+                                  </td>
+                                  <td>
+                                    <span className="badge" style={{ background: '#e0f2fe', color: '#0369a1' }}>
+                                      🩺 {p.diagnosis || 'Clinical Visit'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <div>
+                                      <strong style={{ color: 'var(--primary)', fontSize: '0.9rem' }}>{p.medicine_name}</strong>
+                                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                        <strong>{p.quantity} units</strong> • {p.dosage || 'Standard dose'} ({p.instructions || 'After meals'})
+                                      </div>
                                     </div>
-                                  </div>
-                                </td>
-                                <td>
-                                  {isExp ? (
-                                    <span className="badge" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontWeight: 800 }}>
-                                      ⛔ EXPIRED
-                                    </span>
-                                  ) : isShort ? (
-                                    <span className="badge low-stock" style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', fontWeight: 700 }}>
-                                      ⚠️ Short ({p.current_stock ?? 0} left)
-                                    </span>
-                                  ) : isLow ? (
-                                    <span className="badge low-stock" style={{ fontWeight: 700 }}>
-                                      ⚠️ Low ({p.current_stock} left)
-                                    </span>
-                                  ) : (
-                                    <span className="badge accepted">
-                                      {p.current_stock} in stock
-                                    </span>
-                                  )}
-                                </td>
-                                <td>
-                                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                                    <button
-                                      onClick={() => {
-                                        setVerifyRxModal({ open: true, rx: p });
-                                        setVerifyDispenseQty(p.quantity || 1);
-                                        setVerifyDispenseMedId(p.medicine_id || '');
-                                      }}
-                                      className="btn btn-secondary btn-sm"
-                                      title="Review doctor prescription, illness, and patient details">
-                                      <Eye size={13} /> Verify Rx
-                                    </button>
+                                  </td>
+                                  <td>
                                     {isExp ? (
+                                      <span className="badge expired">⛔ EXPIRED</span>
+                                    ) : isShort ? (
+                                      <span className="badge low-stock">⚠️ Short ({p.current_stock ?? 0} left)</span>
+                                    ) : isLow ? (
+                                      <span className="badge low-stock">⚠️ Low ({p.current_stock} left)</span>
+                                    ) : (
+                                      <span className="badge accepted">✓ {p.current_stock} in stock</span>
+                                    )}
+                                  </td>
+                                  <td>
+                                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                                      {isExp ? (
+                                        <button
+                                          type="button"
+                                          disabled
+                                          className="btn btn-danger btn-sm"
+                                          style={{ opacity: 0.65, cursor: 'not-allowed' }}>
+                                          ⛔ Blocked
+                                        </button>
+                                      ) : isShort ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setReorderForm({
+                                              medicine_id: p.medicine_id || '',
+                                              requested_quantity: Math.max(50, Number(p.quantity) - Number(p.current_stock || 0) + 50)
+                                            });
+                                            setReorderModal(true);
+                                          }}
+                                          className="btn btn-secondary btn-sm"
+                                          style={{ borderColor: '#f59e0b', color: '#b45309' }}>
+                                          <ShoppingCart size={12} /> Restock
+                                        </button>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDispense(p.prescribed_id, p.quantity, p.current_stock, p.expiry_date, p.medicine_name)}
+                                          className="btn btn-success btn-sm">
+                                          <Check size={13} /> Dispense
+                                        </button>
+                                      )}
+
                                       <button
                                         type="button"
-                                        disabled
-                                        className="btn btn-danger btn-sm"
-                                        style={{ opacity: 0.65, cursor: 'not-allowed' }}
-                                        title="Cannot dispense: Medication has expired!">
-                                        ⛔ Expired
-                                      </button>
-                                    ) : isShort ? (
-                                      <button
                                         onClick={() => {
-                                          setReorderForm({
-                                            medicine_id: p.medicine_id || '',
-                                            requested_quantity: Math.max(50, Number(p.quantity) - Number(p.current_stock || 0) + 50)
-                                          });
-                                          setReorderModal(true);
+                                          setVerifyRxModal({ open: true, rx: p });
+                                          setVerifyDispenseQty(p.quantity || 1);
+                                          setVerifyDispenseMedId(p.medicine_id || '');
                                         }}
                                         className="btn btn-secondary btn-sm"
-                                        style={{ borderColor: '#ef4444', color: '#b91c1c' }}
-                                        title="Request stock replenishment from admin">
-                                        <ShoppingCart size={13} /> Restock
+                                        title="Verify full clinical prescription & batch details">
+                                        <Eye size={13} /> Verify Rx
                                       </button>
-                                    ) : (
-                                      <button
-                                        onClick={() => handleDispense(p.prescribed_id, p.quantity, p.current_stock, p.expiry_date, p.medicine_name)}
-                                        className="btn btn-success btn-sm">
-                                        <Check size={13} /> Dispense
-                                      </button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {activeTab === 'inventory' && (
                 <div className="card">
