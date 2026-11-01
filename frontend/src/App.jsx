@@ -9,7 +9,7 @@ import {
   Printer, FileText, Eye, AlertTriangle
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5001/api';
+const API_BASE = (import.meta.env.VITE_API_BASE || 'http://localhost:5001/api').replace(/\/+$/, '');
 
 // Reusable API Fetcher for Node.js Express Backend
 async function apiCall(endpoint, method = 'GET', body = null, token = null) {
