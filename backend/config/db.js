@@ -12,21 +12,30 @@ function getDbConfig() {
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
-      ssl: process.env.DB_SSL === 'false' ? undefined : { rejectUnauthorized: false },
+      ssl: process.env.DB_SSL === 'false' ? undefined : { minVersion: 'TLSv1.2', rejectUnauthorized: false },
     };
   }
 
-  // Otherwise use individual environment variables
+  // Individual environment variables (supporting multiple standard naming styles)
+  const host = process.env.DB_HOST || process.env.HOST || 'localhost';
+  const port = process.env.DB_PORT ? Number(process.env.DB_PORT) : (process.env.PORT_DB ? Number(process.env.PORT_DB) : 3306);
+  const user = process.env.DB_USER || process.env.USER_NAME || process.env.DB_USERNAME || 'root';
+  const password = process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : (process.env.PASSWORD || '');
+  const database = process.env.DB_NAME || process.env.DATABASE || 'hospital_management_system';
+
+  const sslEnv = (process.env.DB_SSL || '').trim().toLowerCase();
+  const requiresSsl = sslEnv === 'true' || sslEnv === '1' || sslEnv === 'required' || sslEnv === 'yes' || host.includes('tidbcloud.com');
+
   return {
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 3306,
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'hospital_management_system',
+    host,
+    port,
+    user,
+    password,
+    database,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
+    ssl: requiresSsl ? { minVersion: 'TLSv1.2', rejectUnauthorized: false } : undefined,
   };
 }
 
@@ -37,7 +46,7 @@ const pool = mysql.createPool(getDbConfig());
 (async () => {
   try {
     const conn = await pool.getConnection();
-    console.log(`✅ [MySQL Database] Connected successfully to ${process.env.DB_NAME || 'database'}`);
+    console.log(`✅ [MySQL Database] Connected successfully to ${process.env.DB_NAME || process.env.DATABASE || 'database'}`);
     conn.release();
   } catch (err) {
     console.error('❌ [MySQL Database] Connection Error:', err.message);
